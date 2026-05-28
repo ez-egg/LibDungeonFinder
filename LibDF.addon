@@ -20,5 +20,4 @@ Modules/IsQuestFinished.lua
 Modules/SpecificDungeonsOpened.lua
 Modules/SpecificDungeonsRefreshed.lua
 Modules/SpecificDungeonIterated.lua
-Modules/DebugMessages.lua
 Modules/GroupDungeonEntered.lua
