@@ -1,18 +1,21 @@
-LibDF = {}
-LibDF.GroupDungeonZones = {}
-LibDF.ZoneActivityIds = {}
-LibDF.SkillpointQuests = {}
+-- This library is licensed under CC-BY-SA 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by-sa/4.0/
+
+LibDungeonFinder = {}
+LibDungeonFinder.name = "LibDungeonFinder"
+LibDungeonFinder.GroupDungeonZones = {}
+LibDungeonFinder.ZoneActivityIds = {}
+LibDungeonFinder.SkillpointQuests = {}
 
 local callbackRegistry = {}
 
-function LibDF.RegisterCallback(eventName, callback)
+function LibDungeonFinder.RegisterCallback(eventName, callback)
     if not callbackRegistry[eventName] then
         callbackRegistry[eventName] = {}
     end
     table.insert(callbackRegistry[eventName], callback)
 end
 
-function LibDF.UnregisterCallback(eventName, callback)
+function LibDungeonFinder.UnregisterCallback(eventName, callback)
     local list = callbackRegistry[eventName]
     if not list then return end
     for i, cb in ipairs(list) do
@@ -23,7 +26,7 @@ function LibDF.UnregisterCallback(eventName, callback)
     end
 end
 
-function LibDF._FireCallbacks(eventName, ...)
+function LibDungeonFinder._FireCallbacks(eventName, ...)
     local list = callbackRegistry[eventName]
     if not list then return end
     local snapshot = {}
@@ -33,7 +36,7 @@ function LibDF._FireCallbacks(eventName, ...)
     end
 end
 
-function LibDF._IsSpecificDungeons()
+function LibDungeonFinder._IsSpecificDungeons()
     if DUNGEON_FINDER_KEYBOARD and DUNGEON_FINDER_KEYBOARD.filterComboBox then
         local selectedData = DUNGEON_FINDER_KEYBOARD.filterComboBox:GetSelectedItemData()
         if selectedData then
@@ -46,23 +49,23 @@ function LibDF._IsSpecificDungeons()
     return false
 end
 
-function LibDF._IsDungeonFinderShowing()
+function LibDungeonFinder._IsDungeonFinderShowing()
     return (DUNGEON_FINDER_KEYBOARD and DUNGEON_FINDER_KEYBOARD.fragment and DUNGEON_FINDER_KEYBOARD.fragment:IsShowing())
         or (DUNGEON_FINDER_GAMEPAD  and DUNGEON_FINDER_GAMEPAD.fragment  and DUNGEON_FINDER_GAMEPAD.fragment:IsShowing())
 end
 
 local function BuildGroupDungeonLookup()
-    LibDF.GroupDungeonZones = {}
-    LibDF.ZoneActivityIds = {}
+    LibDungeonFinder.GroupDungeonZones = {}
+    LibDungeonFinder.ZoneActivityIds = {}
     for _, activityType in ipairs({ LFG_ACTIVITY_DUNGEON, LFG_ACTIVITY_MASTER_DUNGEON }) do
         local i = 1
         local activityId = GetActivityIdByTypeAndIndex(activityType, i)
         while activityId ~= 0 do
             local zoneId = GetActivityZoneId(activityId)
             if zoneId ~= 0 then
-                LibDF.GroupDungeonZones[zoneId] = true
-                if not LibDF.ZoneActivityIds[zoneId] then
-                    LibDF.ZoneActivityIds[zoneId] = activityId
+                LibDungeonFinder.GroupDungeonZones[zoneId] = true
+                if not LibDungeonFinder.ZoneActivityIds[zoneId] then
+                    LibDungeonFinder.ZoneActivityIds[zoneId] = activityId
                 end
             end
             i = i + 1
@@ -72,29 +75,26 @@ local function BuildGroupDungeonLookup()
 end
 
 local function BuildSkillpointQuestLookup()
-    LibDF.SkillpointQuests = {}
+    LibDungeonFinder.SkillpointQuests = {}
 
     local skillpointSet = {}
     for _, questId in ipairs(LibQuestData.quest_has_skill_point) do
         skillpointSet[questId] = true
     end
 
-    -- Build a reverse index: zoneId -> set of textures
     local zoneTextures = {}
     for texture, mapIds in pairs(LibMapData.textureNamesLookup) do
         for _, mapId in ipairs(mapIds) do
             local zoneId = GetZoneId(GetZoneIndexByMapId(mapId))
-            if zoneId and zoneId ~= 0 and LibDF.GroupDungeonZones[zoneId] then
+            if zoneId and zoneId ~= 0 and LibDungeonFinder.GroupDungeonZones[zoneId] then
                 if not zoneTextures[zoneId] then zoneTextures[zoneId] = {} end
                 zoneTextures[zoneId][texture] = true
             end
         end
     end
 
-    -- For each dungeon zone, collect its skillpoint quests
-    -- seen[zoneId][questId] prevents duplicates when a zone has multiple textures
     local seen = {}
-    for zoneId in pairs(LibDF.GroupDungeonZones) do
+    for zoneId in pairs(LibDungeonFinder.GroupDungeonZones) do
         local textures = zoneTextures[zoneId]
         if textures then
             for texture in pairs(textures) do
@@ -106,10 +106,10 @@ local function BuildSkillpointQuestLookup()
                             if not seen[zoneId] then seen[zoneId] = {} end
                             if not seen[zoneId][questId] then
                                 seen[zoneId][questId] = true
-                                if not LibDF.SkillpointQuests[zoneId] then
-                                    LibDF.SkillpointQuests[zoneId] = {}
+                                if not LibDungeonFinder.SkillpointQuests[zoneId] then
+                                    LibDungeonFinder.SkillpointQuests[zoneId] = {}
                                 end
-                                table.insert(LibDF.SkillpointQuests[zoneId], questId)
+                                table.insert(LibDungeonFinder.SkillpointQuests[zoneId], questId)
                             end
                         end
                     end
@@ -122,12 +122,13 @@ end
 local function OnPlayerActivated()
     BuildGroupDungeonLookup()
     BuildSkillpointQuestLookup()
+    EVENT_MANAGER:UnregisterForEvent(LibDungeonFinder.name .. "_OnPlayerActivated", EVENT_PLAYER_ACTIVATED)
 end
 
 local function OnAddonLoaded(_, addonName)
-    if addonName ~= "LibDF" then return end
-    EVENT_MANAGER:UnregisterForEvent("LibDF_OnAddonLoaded", EVENT_ADD_ON_LOADED)
-    EVENT_MANAGER:RegisterForEvent("LibDF_OnPlayerActivated", EVENT_PLAYER_ACTIVATED, OnPlayerActivated)
+    if addonName ~= LibDungeonFinder.name then return end
+    EVENT_MANAGER:UnregisterForEvent(LibDungeonFinder.name .. "_OnAddonLoaded", EVENT_ADD_ON_LOADED)
+    EVENT_MANAGER:RegisterForEvent(LibDungeonFinder.name .. "_OnPlayerActivated", EVENT_PLAYER_ACTIVATED, OnPlayerActivated)
 end
 
-EVENT_MANAGER:RegisterForEvent("LibDF_OnAddonLoaded", EVENT_ADD_ON_LOADED, OnAddonLoaded)
+EVENT_MANAGER:RegisterForEvent(LibDungeonFinder.name .. "_OnAddonLoaded", EVENT_ADD_ON_LOADED, OnAddonLoaded)

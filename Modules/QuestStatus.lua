@@ -1,7 +1,17 @@
--- retrieve whether the player has an finished or unfinished pledge quest for a dungeon
--- you need to pass the dungeon's zoneid
+LibDungeonFinder = LibDungeonFinder or {}
 
-function LibDF.IsPledgeFinished(zoneId)
+function LibDungeonFinder.IsQuestFinished(zoneId)
+    local questIds = LibDungeonFinder.SkillpointQuests[zoneId]
+    if not questIds then return nil end
+    for _, questId in ipairs(questIds) do
+        if LibQuestData.completed_quests[questId] then
+            return true
+        end
+    end
+    return false
+end
+
+function LibDungeonFinder.IsPledgeFinished(zoneId)
     local dungeonName = GetZoneNameById(zoneId)
     if not dungeonName or dungeonName == "" then return nil end
 
