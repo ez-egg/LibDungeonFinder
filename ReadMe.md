@@ -61,7 +61,7 @@ local done = LibDungeonFinder.IsQuestFinished(zoneId)
 
 ### IsPledgeFinished
 
-Returns `true` if the active pledge for the dungeon is complete, `false` if in progress, or `nil` if no pledge is in the journal.
+Returns `false` if the pledge is active in the journal, `true` if on its final step (ready to turn in), or `nil` if not in the journal.
 
 ```lua
 local done = LibDungeonFinder.IsPledgeFinished(zoneId)

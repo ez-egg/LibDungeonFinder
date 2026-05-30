@@ -3,7 +3,6 @@ LibDungeonFinder = LibDungeonFinder or {}
 local lastWasSpecific = false
 local openPending = false
 local refreshPending = false
-local inGroupDungeon = false
 local DUNGEON_ACTIVITY_TYPES = { LFG_ACTIVITY_DUNGEON, LFG_ACTIVITY_MASTER_DUNGEON }
 
 local function FireOpened()
@@ -50,23 +49,13 @@ local function IterateEntries()
     end
 end
 
--- Event_zone_changed is lighter than event_player_activated,
--- but it still needs to be permanently registered for this function to work;
--- if we unregister, the event won't fire if the player enters another dungeon without reloading.
--- I've taken steps to try and make this as light as possible through state tracking,
--- but i'm open to feedback if you know a better way.
-
-local function OnZoneChanged(_, _, _, _, zoneId)
-    local isGroupDungeon = LibDungeonFinder.GroupDungeonZones[zoneId] ~= nil
-    if isGroupDungeon and not inGroupDungeon then
-        inGroupDungeon = true
-        zo_callLater(function()
-            if GetZoneId(GetUnitZoneIndex("player")) ~= zoneId then return end
-            LibDungeonFinder._FireCallbacks("GroupDungeonEntered", zoneId)
-        end, 200)
-    elseif not isGroupDungeon then
-        inGroupDungeon = false
-    end
+local function OnGroupDungeonEntered()
+    local zoneId = GetZoneId(GetUnitZoneIndex("player"))
+    if not LibDungeonFinder.GroupDungeonZones[zoneId] then return end
+    zo_callLater(function()
+        if GetZoneId(GetUnitZoneIndex("player")) ~= zoneId then return end
+        LibDungeonFinder._FireCallbacks("GroupDungeonEntered", zoneId)
+    end, 200)
 end
 
 local function OnDungeonFinderActivated()
@@ -103,7 +92,7 @@ local function OnAddonLoaded(_, addonName)
 
     LibDungeonFinder.RegisterCallback("SpecificDungeonsRefreshed", IterateEntries)
 
-    EVENT_MANAGER:RegisterForEvent(LibDungeonFinder.name .. "_GroupDungeonEntered", EVENT_ZONE_CHANGED, OnZoneChanged)
+    EVENT_MANAGER:RegisterForEvent(LibDungeonFinder.name .. "_GroupDungeonEntered", EVENT_PLAYER_ACTIVATED, OnGroupDungeonEntered)
     EVENT_MANAGER:RegisterForEvent(LibDungeonFinder.name .. "_DungeonFinderActivated", EVENT_PLAYER_ACTIVATED, OnDungeonFinderActivated)
 end
 
